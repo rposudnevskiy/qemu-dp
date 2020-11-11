@@ -1,0 +1,15 @@
+patch qemu-dp-2.10.2-add-sheepdog-support.XCP-ng.patch
+From: Roman Posudnevskiy <ramzes_r@yahoo.com>
+Enable support of Sheepdog Distributed Storage System
+
+diff --git a/Makefile b/Makefile
+index 4363361..916edf4 100644
+--- a/Makefile.orig
++++ b/Makefile
+@@ -404,6 +404,7 @@ qemu-dp$(EXESUF): \
+     libqemucrypto.a \
+     stubs/crypto.o \
+     block/rbd.o \
++    block/sheepdog.o \
+     libqemustub.a
+ qemu-dp$(EXESUF): LIBS = -lglib-2.0 -lz -laio -lxenevtchn -lxengnttab -lxenstore -lxenctrl -lxenforeignmemory

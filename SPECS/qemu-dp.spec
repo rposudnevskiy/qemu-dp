@@ -1,12 +1,14 @@
+%define origname qemu-dp
+
 Summary: qemu-dp storage datapath
-Name: qemu-dp
+Name: %{origname}-xcpng
 Epoch: 2
 Version: 2.10.2
 Release: 1.2.0
 License: GPL
 Requires: jemalloc
 Requires: xs-clipboardd
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=v%{version}&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
+Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{origname}/archive?at=v%{version}&format=tar.gz&prefix=%{origname}-%{version}#/%{origname}-%{version}.tar.gz
 Patch0: 0001-seccomp-changing-from-whitelist-to-blacklist.patch
 Patch1: 0002-seccomp-add-obsolete-argument-to-command-line.patch
 Patch2: 0003-seccomp-add-elevateprivileges-argument-to-command-li.patch
@@ -98,20 +100,28 @@ Patch87: make-blockdev-snapshot-use-same-node-name.patch
 Patch88: use_existing_io_context.patch
 Patch89: use_libaio_by_default.patch
 Patch90: Use_the_legacy_grant_copy_ioctl
+
+# XCP-ng testing patches
+Patch1000: qemu-dp-2.10.2-add-rbd-support.XCP-ng.patch
+Patch1001: qemu-dp-2.10.2-add-sheepdog-support.XCP-ng.patch
+
 BuildRequires: libaio-devel glib2-devel
 BuildRequires: libjpeg-devel libpng-devel pixman-devel libdrm-devel
 BuildRequires: xen-dom0-devel xen-libs-devel libusbx-devel
 BuildRequires: libseccomp-devel
+BuildRequires: librbd1-devel
+
+Provides: qemu-dp-xcpng
 
 %description
 This package contains Qemu.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{origname}-%{version}
 
 %build
 ./configure --cc=gcc --cxx=/dev/null --enable-xen --target-list=i386-softmmu --source-path=. \
-    --prefix=%{_prefix} --bindir=%{_libdir}/qemu-dp/bin --datadir=%{_datarootdir} \
+    --prefix=%{_prefix} --bindir=%{_libdir}/%{name}/bin --datadir=%{_datarootdir} \
     --localstatedir=%{_localstatedir} --libexecdir=%{_libexecdir} --sysconfdir=%{_sysconfdir} \
     --enable-werror --enable-libusb --enable-trace-backend=log \
     --disable-kvm --disable-docs --disable-guest-agent --disable-sdl \
@@ -125,18 +135,21 @@ This package contains Qemu.
 %{?cov_wrap} %{__make} %{?_smp_mflags} all
 
 %install
-mkdir -p %{buildroot}%{_libdir}/qemu-dp/bin
+mkdir -p %{buildroot}%{_libdir}/%{name}/bin
 
 rm -rf %{buildroot}
 %{__make} %{?_smp_mflags} install DESTDIR=%{buildroot}
 rm -rf %{buildroot}/usr/include %{buildroot}%{_libdir}/pkgconfig %{buildroot}%{_libdir}/libcacard.*a \
        %{buildroot}/usr/share/locale %{buildroot}%{_datarootdir} %{buildroot}%{_libexecdir} \
-       %{buildroot}%{_libdir}/qemu-dp/bin/ivshmem-* %{buildroot}%{_libdir}/qemu-dp/bin/qemu-system-i386
+       %{buildroot}%{_libdir}/%{name}/bin/ivshmem-* %{buildroot}%{_libdir}/%{name}/bin/qemu-system-i386
 
 %files
-%{_libdir}/qemu-dp/bin
+%{_libdir}/%{name}/bin
 
 %changelog
+* Thu Nov 11 2020 rposudnevskiy <ramzes_r@yahoo.com> - 2.10.2-1.2.0
+- Enable support of Ceph RBD
+
 * Tue Apr 24 2018 marksy <mark.syms@citrix.com> - 2.10.2-1.2.0
 - CA-288288: Avoid built-in QEMU crypto
 
