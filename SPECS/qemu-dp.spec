@@ -1,12 +1,14 @@
+%define origname qemu-dp
+
 Summary: qemu-dp storage datapath
-Name: qemu-dp
+Name: %{origname}-xcpng
 Epoch: 2
 Version: 2.12.0
 Release: 1.10.0
 License: GPL
 Requires: jemalloc
 Requires: xs-clipboardd
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{name}/archive?at=v2.12.0-rc2&format=tar.gz&prefix=%{name}-%{version}#/%{name}-%{version}.tar.gz
+Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{origname}/archive?at=v2.12.0-rc2&format=tar.gz&prefix=%{origname}-%{version}#/%{origname}-%{version}.tar.gz
 Patch0: 01-make-a-qemu-dp-build.patch
 Patch1: 02-do-not-register-xen-backend.patch
 Patch2: 03-added-xen-watch-domain-qmp.patch
@@ -27,21 +29,29 @@ Patch16: 17-avoid-repeated-memory.patch
 Patch17: 18-add-xen-unwatch-domain-qmp.patch
 Patch18: 19-detach-aio-context-before-bs-free.patch
 Patch19: 20-fix-file-and-filename.patch
+
+# XCP-ng testing patches
+Patch1000: qemu-dp-2.12.0-add-rbd-support.XCP-ng.patch
+Patch1001: qemu-dp-2.12.0-add-sheepdog-support.XCP-ng.patch
+
 BuildRequires: libaio-devel glib2-devel
 BuildRequires: libjpeg-devel libpng-devel pixman-devel libdrm-devel
 BuildRequires: xen-dom0-devel xen-libs-devel libusbx-devel
 BuildRequires: libseccomp-devel zlib-devel
+BuildRequires: librbd1-devel
+
+Provides: qemu-dp-xcpng
 
 %description
 This package contains Qemu, but builds only tools and a limited qemu-dp which handles
 the storage datapath.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{origname}-%{version}
 
 %build
 ./configure --cc=gcc --cxx=/dev/null --enable-xen --target-list=i386-softmmu --source-path=. \
-    --prefix=%{_prefix} --bindir=%{_libdir}/qemu-dp/bin --datadir=%{_datarootdir} \
+    --prefix=%{_prefix} --bindir=%{_libdir}/%{name}/bin --datadir=%{_datarootdir} \
     --localstatedir=%{_localstatedir} --libexecdir=%{_libexecdir} --sysconfdir=%{_sysconfdir} \
     --enable-werror --enable-libusb --enable-trace-backend=syslog \
     --disable-kvm --disable-docs --disable-guest-agent --disable-sdl \
@@ -55,19 +65,22 @@ the storage datapath.
 %{?cov_wrap} %{__make} %{?_smp_mflags} V=1 all
 
 %install
-mkdir -p %{buildroot}%{_libdir}/qemu-dp/bin
+mkdir -p %{buildroot}%{_libdir}/%{name}/bin
 
 rm -rf %{buildroot}
 %{__make} %{?_smp_mflags} install DESTDIR=%{buildroot}
 rm -rf %{buildroot}/usr/include %{buildroot}%{_libdir}/pkgconfig %{buildroot}%{_libdir}/libcacard.*a \
        %{buildroot}/usr/share/locale %{buildroot}%{_datarootdir} %{buildroot}%{_libexecdir} \
-       %{buildroot}%{_libdir}/qemu-dp/bin/ivshmem-* %{buildroot}%{_libdir}/qemu-dp/bin/qemu-system-i386
-install -m 644 qemu-dp-tracing "%{buildroot}%{_libdir}/qemu-dp/bin/qemu-dp-tracing"
+       %{buildroot}%{_libdir}/%{name}/bin/ivshmem-* %{buildroot}%{_libdir}/%{name}/bin/qemu-system-i386
+install -m 644 qemu-dp-tracing "%{buildroot}%{_libdir}/%{name}/bin/qemu-dp-tracing"
 
 %files
-%{_libdir}/qemu-dp/bin
+%{_libdir}/%{name}/bin
 
 %changelog
+* Thu Nov 11 2020 rposudnevskiy <ramzes_r@yahoo.com> - 2.12.0-1.10.0
+- Enable support of Ceph RBD
+
 * Thu Aug 16 2018 Mark Syms <mark.syms@citrix.com> - 2.12.0-1.10.0
 - CA-295665 More problems with relink_chain
 

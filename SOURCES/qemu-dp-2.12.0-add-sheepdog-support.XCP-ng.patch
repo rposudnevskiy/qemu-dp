@@ -1,0 +1,31 @@
+patch qemu-dp-2.12.0-add-sheepdog-support.XCP-ng.patch
+From: Roman Posudnevskiy <ramzes_r@yahoo.com>
+Enable support of Sheepdog Distributed Storage System
+
+diff --git a/block/Makefile.objs b/block/Makefile.objs
+index 5829aae..1da7979 100644
+--- a/block/Makefile.objs
++++ b/block/Makefile.objs
+@@ -14,8 +14,7 @@ block-obj-y += null.o mirror.o commit.o io.o create.o
+ block-obj-y += throttle-groups.o
+ block-obj-$(CONFIG_LINUX) += nvme.o
+
+-block-obj-y += nbd.o nbd-client.o
+-block-obj-$(call lnot,$(CONFIG_XEN)) += sheepdog.o
++block-obj-y += nbd.o nbd-client.o sheepdog.o
+ block-obj-$(CONFIG_LIBISCSI) += iscsi.o
+ block-obj-$(if $(CONFIG_LIBISCSI),y,n) += iscsi-opts.o
+ block-obj-$(CONFIG_LIBNFS) += nfs.o
+
+diff --git a/Makefile b/Makefile
+index 3d41ab8..5ed7ad2 100644
+--- a/Makefile
++++ b/Makefile
+@@ -625,6 +625,7 @@ qemu-dp$(EXESUF): \
+     libqemudpqapi.a libqemuchardev.a libqemublock.a libqemuio.a libqemuqom.a \
+     libqemucommondp.a libqemuutil.a libqemucrypto.a \
+     stubs/crypto.o \
++    block/sheepdog.o \
+     block/rbd.o
+
+ qemu-dp$(EXESUF): LIBS = -lglib-2.0 -lz -laio -lutil -lxenevtchn -lxengnttab -lxenstore -lxenctrl -lxenforeignmemory

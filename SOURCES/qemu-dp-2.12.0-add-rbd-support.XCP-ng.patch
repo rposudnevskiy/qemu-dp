@@ -1,0 +1,92 @@
+patch qemu-dp-2.12.0-add-rbd-support.XCP-ng.patch
+From: Roman Posudnevskiy <ramzes_r@yahoo.com>
+Enable support of Ceph RBD
+
+diff --git a/Makefile b/Makefile
+index 31758b6..3d41ab8 100644
+--- a/Makefile
++++ b/Makefile
+@@ -623,7 +623,9 @@ qemu-dp$(EXESUF): \
+     hw/core/fw-path-provider.o hw/core/reset.o chardev/char-socket.o \
+     \
+     libqemudpqapi.a libqemuchardev.a libqemublock.a libqemuio.a libqemuqom.a \
+-    libqemucommondp.a libqemuutil.a libqemucrypto.a
++    libqemucommondp.a libqemuutil.a libqemucrypto.a \
++    stubs/crypto.o \
++    block/rbd.o
+ 
+ qemu-dp$(EXESUF): LIBS = -lglib-2.0 -lz -laio -lutil -lxenevtchn -lxengnttab -lxenstore -lxenctrl -lxenforeignmemory
+ 
+diff --git a/stubs/crypto.c b/stubs/crypto.c
+index 365e445..0d90f65 100644
+--- a/stubs/crypto.c
++++ b/stubs/crypto.c
+@@ -1,6 +1,7 @@
+ #include "qemu/osdep.h"
+ #include "qapi/error.h"
+ #include "crypto/block.h"
++#include "crypto/secret.h"
+ #include "crypto/cipher.h"
+ #include "crypto/init.h"
+ #include "crypto/tlssession.h"
+@@ -168,3 +169,60 @@ int qcrypto_init(Error **errp)
+ {
+     return 0;
+ }
++
++int qcrypto_secret_lookup(const char *secretid,
++                          uint8_t **data,
++                          size_t *datalen,
++                          Error **errp)
++{
++    Object *obj;
++    QCryptoSecret *secret;
++
++    obj = object_resolve_path_component(
++        object_get_objects_root(), secretid);
++    if (!obj) {
++        error_setg(errp, "No secret with id '%s'", secretid);
++        return -1;
++    }
++
++    secret = (QCryptoSecret *)
++        object_dynamic_cast(obj,
++                            TYPE_QCRYPTO_SECRET);
++    if (!secret) {
++        error_setg(errp, "Object with id '%s' is not a secret",
++                   secretid);
++        return -1;
++    }
++
++    if (!secret->rawdata) {
++        error_setg(errp, "Secret with id '%s' has no data",
++                   secretid);
++        return -1;
++    }
++
++    *data = g_new0(uint8_t, secret->rawlen + 1);
++    memcpy(*data, secret->rawdata, secret->rawlen);
++    (*data)[secret->rawlen] = '\0';
++    *datalen = secret->rawlen;
++
++    return 0;
++}
++
++char *qcrypto_secret_lookup_as_base64(const char *secretid,
++                                      Error **errp)
++{
++    uint8_t *data;
++    size_t datalen;
++    char *ret;
++
++    if (qcrypto_secret_lookup(secretid,
++                              &data,
++                              &datalen,
++                              errp) < 0) {
++        return NULL;
++    }
++
++    ret = g_base64_encode(data, datalen);
++    g_free(data);
++    return ret;
++}
