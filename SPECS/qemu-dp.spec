@@ -1,5 +1,7 @@
+%define origname qemu-dp
+
 Summary: qemu-dp storage datapath
-Name: qemu-dp
+Name: %{origname}-xcpng
 Epoch: 2
 Version: 2.12.0
 Release: 2.0.3
@@ -8,7 +10,7 @@ Requires: jemalloc
 Requires: xs-clipboardd
 Requires: kernel >= 4.19.19-5.0.0
 
-Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/qemu-dp/archive?at=v2.12.0-rc2&format=tar.gz&prefix=qemu-dp-2.12.0#/qemu-dp-2.12.0.tar.gz
+Source0: https://code.citrite.net/rest/archive/latest/projects/XSU/repos/%{origname}/archive?at=v2.12.0-rc2&format=tar.gz&prefix=%{origname}-%{version}#/%{origname}-%{version}.tar.gz
 
 Patch0: 01-make-a-qemu-dp-build.patch
 Patch1: 02-do-not-register-xen-backend.patch
@@ -38,24 +40,31 @@ Patch24: 25-flush-all-block-drivers-on.patch
 Patch25: 26-speed-up-nbd_cmd_block_status.patch
 Patch26: 27-limit-logging-of-ioreq_parse.patch
 
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/qemu-dp/archive?at=v2.12.0-rc2&format=tar.gz&prefix=qemu-dp-2.12.0#/qemu-dp-2.12.0.tar.gz) = 0e87fdc966d05f4e5ad868034fcd8ee2a08ca62d
-Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/qemu-dp.pg/archive?format=tar&at=v2.0.3#/qemu.patches.tar) = 891e3b43dc7c33ac6862406e83f973ea595bf4de
+# XCP-ng testing patches
+Patch1000: qemu-dp-2.12.0-add-rbd-support.XCP-ng.patch
+Patch1001: qemu-dp-2.12.0-add-sheepdog-support.XCP-ng.patch
+
+#Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XSU/repos/qemu-dp/archive?at=v2.12.0-rc2&format=tar.gz&prefix=qemu-dp-2.12.0#/qemu-dp-2.12.0.tar.gz) = 0e87fdc966d05f4e5ad868034fcd8ee2a08ca62d
+#Provides: gitsha(https://code.citrite.net/rest/archive/latest/projects/XS/repos/qemu-dp.pg/archive?format=tar&at=v2.0.3#/qemu.patches.tar) = 891e3b43dc7c33ac6862406e83f973ea595bf4de
 
 BuildRequires: libaio-devel glib2-devel
 BuildRequires: libjpeg-devel libpng-devel pixman-devel libdrm-devel
 BuildRequires: xen-dom0-devel xen-libs-devel libusbx-devel
 BuildRequires: libseccomp-devel zlib-devel
+BuildRequires: librbd1-devel
+
+Provides: qemu-dp-xcpng
 
 %description
 This package contains Qemu, but builds only tools and a limited qemu-dp which handles
 the storage datapath.
 
 %prep
-%autosetup -p1
+%autosetup -p1 -n %{origname}-%{version}
 
 %build
 ./configure --cc=gcc --cxx=/dev/null --enable-xen --target-list=i386-softmmu --source-path=. \
-    --prefix=%{_prefix} --bindir=%{_libdir}/qemu-dp/bin --datadir=%{_datarootdir} \
+    --prefix=%{_prefix} --bindir=%{_libdir}/%{name}/bin --datadir=%{_datarootdir} \
     --localstatedir=%{_localstatedir} --libexecdir=%{_libexecdir} --sysconfdir=%{_sysconfdir} \
     --enable-werror --enable-libusb --enable-trace-backend=syslog \
     --disable-kvm --disable-docs --disable-guest-agent --disable-sdl \
@@ -69,20 +78,23 @@ the storage datapath.
 %{?cov_wrap} %{__make} %{?_smp_mflags} V=1 all
 
 %install
-mkdir -p %{buildroot}%{_libdir}/qemu-dp/bin
+mkdir -p %{buildroot}%{_libdir}/%{name}/bin
 
 rm -rf %{buildroot}
 %{__make} %{?_smp_mflags} install DESTDIR=%{buildroot}
 rm -rf %{buildroot}/usr/include %{buildroot}%{_libdir}/pkgconfig %{buildroot}%{_libdir}/libcacard.*a \
        %{buildroot}/usr/share/locale %{buildroot}%{_datarootdir} %{buildroot}%{_libexecdir} \
-       %{buildroot}%{_libdir}/qemu-dp/bin/ivshmem-* %{buildroot}%{_libdir}/qemu-dp/bin/qemu-system-i386
-install -m 644 qemu-dp-tracing "%{buildroot}%{_libdir}/qemu-dp/bin/qemu-dp-tracing"
+       %{buildroot}%{_libdir}/%{name}/bin/ivshmem-* %{buildroot}%{_libdir}/%{name}/bin/qemu-system-i386
+install -m 644 qemu-dp-tracing "%{buildroot}%{_libdir}/%{name}/bin/qemu-dp-tracing"
 
 %files
-%dir %{_libdir}/qemu-dp/
-%{_libdir}/qemu-dp/bin
+%dir %{_libdir}/%{name}/
+%{_libdir}/%{name}/bin
 
 %changelog
+* Thu Nov 11 2020 rposudnevskiy <ramzes_r@yahoo.com> - 2.12.0-2.0.3
+- Enable support of Ceph RBD
+
 * Fri Apr 05 2019 Tim Smith <tim.smith@citrix.com> - 2:2.12.0-2.0.3
 - CA-314386 limit ioreq_parse() errors to avoid log storm
 
